@@ -1,0 +1,48 @@
+﻿@inject IAccountsService AccountsService
+<MudMenu TransformOrigin="Origin.BottomCenter">
+    <ActivatorContent>
+        <AuthorizeView >
+            <Authorized>
+
+                <MudAvatar Image="@AccountsService.User.Avatar" Size="Size.Small" />
+            </Authorized>
+            <NotAuthorized>
+                <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" />
+
+            </NotAuthorized>
+        </AuthorizeView >
+    </ActivatorContent>
+    <ChildContent>
+        <AuthorizeView  >
+            <Authorized>
+
+                <MudMenuItem>
+                    <MudLink Href="#" @onclick="(async ()=>await OnClickLogout())">Logout</MudLink>
+                </MudMenuItem>
+            </Authorized>
+            <NotAuthorized>
+                <MudMenuItem>
+                    <MudLink Href="/login">Login</MudLink>
+                </MudMenuItem>
+
+            </NotAuthorized>
+        </AuthorizeView >
+        <MudMenuItem>
+            <MudLink Href="/register">New Account</MudLink>
+        </MudMenuItem>
+    </ChildContent>
+
+
+</MudMenu>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        AccountsService.UserLoginChange += StateHasChanged;
+    }
+    async Task OnClickLogout()
+    {
+        await AccountsService.Logout();
+        NavigationManager.NavigateTo("/");
+    }
+}

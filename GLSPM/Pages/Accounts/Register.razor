@@ -1,0 +1,101 @@
+﻿@page "/Register"
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Http.Internal
+
+<PageTitle>Register</PageTitle>
+
+
+<MudContainer MaxWidth="MaxWidth.Small" Style="max-width:500px">
+    <MudText Typo="Typo.h4" Class="mb-3" Align="Align.Center">
+        Login To GLSPM
+    </MudText>
+    <MudCard>
+        <MudForm Model="@model" @ref="@form" Validation="@(validtor.ValidateValue)" ValidationDelay="0">
+            <MudCardContent>
+                <MudText Typo="Typo.h4" Align="Align.Center">
+                    <InputFile id="fileInput" OnChange="(async (e)=>await UploadAvatar(e))" hidden multiple />
+                    @if (!string.IsNullOrEmpty(avatarUrl))
+                    {
+                        <MudAvatar Image="@avatarUrl" Size="Size.Large" Rounded="false" />
+                    }
+                    else
+                    {
+                        <MudFab HtmlTag="label"
+                            Class="mx-auto"
+                            Color="Color.Primary"
+                            Icon="@Icons.Filled.CloudUpload"
+                            Label="Upload Avatar"
+                            for="fileInput" />
+                    }
+
+                </MudText>
+
+                <MudTextField @bind-Value="model.Username"
+                              For="@(() => model.Username)"
+                              Immediate="true"
+                              Label="Username" />
+
+                <MudTextField @bind-Value="model.Email"
+                              For="@(() => model.Email)"
+                              Immediate="true"
+                              Label="Email" />
+
+                <MudTextField @bind-Value="model.Password"
+                              For="@(() => model.Password)"
+                              Immediate="true"
+                              Label="Password"
+                              InputType="InputType.Password" />
+            </MudCardContent>
+        </MudForm>
+        <MudCardActions>
+            <MudButtonGroup Color="Color.Primary" Class="mx-auto" Variant="Variant.Text">
+                <MudButton Link="./login">Login</MudButton>
+                <MudButton @onclick="(async ()=> await Submit())">Register</MudButton>
+            </MudButtonGroup>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Inject] ISnackbar Snackbar { get; set; }
+    [Inject] IAccountsService AccountsService { get; set; }
+    RegisterUserDto model = new RegisterUserDto();
+    RegisterUserDtoValidator validtor = new RegisterUserDtoValidator();
+    MudForm form;
+    private string avatarUrl = string.Empty;
+    IBrowserFile AvatarFile;
+    private async Task UploadAvatar(InputFileChangeEventArgs e)
+    {
+        if (e.File != null && e.File.Size <= IAccountsService.maxAllowedSize)
+        {
+            AvatarFile = e.File;
+            var buffers = new byte[e.File.Size];
+            await AvatarFile.OpenReadStream(IAccountsService.maxAllowedSize).ReadAsync(buffers);
+            avatarUrl = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(buffers)}";
+
+        }
+        else
+            Snackbar.Add("Image Size Should be 10KB to 2MB ", Severity.Error);
+
+    }
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (form.IsValid)
+        {
+            var response = await AccountsService.Register(model, AvatarFile);
+            if (response.Success)
+            {
+                Snackbar.Add("Account Created");
+                NavigationManager.NavigateTo("/login");
+            }
+            else
+            {
+                Snackbar.Add($"Couldn't Create The Account For The Following Errors");
+                Snackbar.Add($"{response.Error}", Severity.Error);
+
+            }
+        }
+    }
+}

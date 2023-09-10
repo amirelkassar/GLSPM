@@ -1,0 +1,7 @@
+﻿.loader{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    padding:25% 50%;
+}

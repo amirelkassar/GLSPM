@@ -1,0 +1,58 @@
+﻿@page "/Login"
+<PageTitle>Login</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Style="max-width:500px">
+    <MudText Typo="Typo.h4" Class="mb-3" Align="Align.Center">
+        Login To GLSPM
+    </MudText>
+    <MudCard>
+        <MudForm Model="@model" @ref="@form" Validation="@(validtor.ValidateValue)" ValidationDelay="0">
+            <MudCardContent>
+                <MudText Typo="Typo.h4" Align="Align.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Login" Color="Color.Primary" Style="font-size: 4rem;" />
+                </MudText>
+                <MudTextField @bind-Value="model.Username"
+                              For="@(() => model.Username)"
+                              Immediate="true"
+                              Label="Username / Email" />
+
+                <MudTextField @bind-Value="model.Password"
+                              For="@(() => model.Password)"
+                              Immediate="true"
+                              Label="Password"
+                              InputType="InputType.Password" />
+            </MudCardContent>
+        </MudForm>
+        <MudCardActions>
+            <MudButtonGroup Color="Color.Primary" Class="mx-auto" Variant="Variant.Text">
+                <MudButton OnClick="@(async () => await Submit())">Login</MudButton>
+                <MudButton Link="./register">Register</MudButton>
+            </MudButtonGroup>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Inject] ISnackbar Snackbar { get; set; }
+    [Inject] IAccountsService AccountsService { get; set; }
+    LoginUserDto model = new LoginUserDto();
+    LoginUserDtoValidtor validtor = new LoginUserDtoValidtor();
+    MudForm form;
+
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (form.IsValid)
+        {
+            var res = await AccountsService.Login(model);
+            if (res.Success)
+            {
+                Snackbar.Add("Login Success");
+                NavigationManager.NavigateTo("/");
+            }
+            else
+                Snackbar.Add("Login faild");
+        }
+    }
+}

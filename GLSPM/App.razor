@@ -1,0 +1,26 @@
+@using Microsoft.AspNetCore.Components.Authorization
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <div style="text-align:center">
+                        <h1>Sorry</h1>
+                        <img src="data:image/png;base64,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"/>
+                        <p>You're not authorized to reach this page.</p>
+                        <p>You may need to log in as a different user.</p>
+                    </div>
+
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

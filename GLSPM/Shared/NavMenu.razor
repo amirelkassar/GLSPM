@@ -1,0 +1,19 @@
+﻿@inject IAccountsService AccountsService
+
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="Passwords" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Passwords</MudNavLink>
+            <MudNavLink Href="Cards" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CreditCard">Cards</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        AccountsService.UserLoginChange += StateHasChanged;
+    }
+}

@@ -1,0 +1,185 @@
+﻿@page "/Passwords"
+@attribute [Authorize]
+<div class="d-flex flex-wrap justify-space-between">
+    <MudText Typo="Typo.h3" Class="mb-5" Align="Align.Left">
+        Passwords
+    </MudText>
+    <MudButtonGroup OverrideStyles="false" Variant="Variant.Text">
+        <MudButton Variant="Variant.Filled" @onclick="@(async ()=>await OpenCreateDialog())" StartIcon="@Icons.Material.Filled.AddCard"
+                   Color="Color.Success" Class="align-self-center mb-5">Add</MudButton>
+        <MudButton Variant="Variant.Filled" @onclick="@(async ()=>await OpenGeneratePasswordDialog())" StartIcon="@Icons.Material.Filled.Password"
+                   Color="Color.Primary" Class="align-self-center mb-5">Generate</MudButton>
+        <MudTooltip>
+            <ChildContent>
+                <MudToggleIconButton ToggledChanged="(async (e)=>await ToggleDataMode(e))" Variant="Variant.Text"
+                                     ToggledIcon="@Icons.Material.Filled.DeleteSweep" ToggledColor="Color.Error"
+                                     Icon="@Icons.Material.Filled.ViewList" Color="Color.Success" Class="align-self-center mb-5" Size="Size.Large" />
+            </ChildContent>
+            <TooltipContent>
+                @DataMode
+            </TooltipContent>
+        </MudTooltip>
+
+    </MudButtonGroup>
+</div>
+<MudAutocomplete T="string" Label="Search Active Passwords" Style="margin-bottom:20px;max-width:500px;"
+                 AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary"
+                 SearchFunc="@(async (e)=>await SearchInTitles(e))"
+                 ResetValueOnEmptyText="true"
+                 ValueChanged="@(async (e)=>await SearchInTitles(e))" />
+@if (loading)
+{
+    <MudGrid>
+        @for (var i = 0; i < pageSize; i++)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardHeader>
+
+                        <CardHeaderContent>
+                            <MudSkeleton Animation="Animation.Wave" Width="60%" />
+                            <MudSkeleton Animation="Animation.Wave" Width="40%" />
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="40px" Width="40px" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Height="250px" />
+                    <MudCardContent>
+                        <MudSkeleton Animation="Animation.Wave" Height="100px" />
+                        <MudSkeleton Animation="Animation.Wave" Height="100px" />
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-2 mb-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-3 mb-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-3 mb-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Animation="Animation.Wave" Height="30px" Width="30px" Class="ml-3 mb-2" />
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+
+
+}
+else @if (PasswordsResponse != null && PasswordsResponse.Data.Count() >= 1)
+{
+    <MudGrid>
+
+        @foreach (var password in PasswordsResponse.Data)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <PasswordCard Model="password" OnRefreshPasswords="(async ()=>await ToggleDataMode(TrashMode))" />
+            </MudItem>
+        }
+    </MudGrid>
+    <div class="d-flex justify-center">
+        <MudPagination ShowFirstButton="true" ShowLastButton="true" Count="PasswordsResponse.TotalPages" Selected="PasswordsResponse.PageNumber" SelectedChanged="(async (p)=>await SelectedPageChnaged(p))" Class="mt-4" />
+    </div>
+}
+else
+{
+    <MudStack>
+        <MudImage Src="imgs/empty-nodata.svg" Height="500" />
+        <MudText Typo="Typo.h5" Align="Align.Center">
+            Empty no data!
+        </MudText>
+    </MudStack>
+
+}
+
+<style>
+    .mud-select.mud-autocomplete {
+        display: flex !important;
+        justify-content: center;
+    }
+</style>
+@code {
+    [Inject] IPasswordsService PasswordsService { get; set; }
+    [Inject] ISnackbar Snackbar { get; set; }
+    [Inject] IDialogService DialogService { get; set; }
+
+    private MultiObjectsResponse<IEnumerable<PasswordReadDto>> PasswordsResponse;
+    private string activebadge = "Active";
+    private List<string> PasswordsTitles = new List<string>();
+    private string searchValue;
+    private bool loading = true;
+    private int pageSize = 10;
+    private bool TrashMode = false;
+    private string DataMode => TrashMode ? "Showing Deleting Items" : "Showing Active Items";
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var results = DialogService.Show<CreatePasswordDialog>("Create New Password", options);
+        var dialogres = await results.Result;
+        if (!dialogres.Cancelled && await results.GetReturnValueAsync<bool>())
+        {
+            PasswordsResponse = await PasswordsService.GetListAsync(new GetListDto());
+            if (!PasswordsResponse.Success)
+            {
+                Snackbar.Add("faild loading the data");
+                Snackbar.Add(PasswordsResponse.Error.ToString(), Severity.Error);
+            }
+        }
+    }
+    protected async override Task OnInitializedAsync()
+    {
+        await LoadPasswords();
+        if (!PasswordsResponse.Success)
+        {
+            Snackbar.Add("faild loading the data");
+            Snackbar.Add(PasswordsResponse.Error.ToString(), Severity.Error);
+            PasswordsService.PasswordsChnaged += StateHasChanged;
+        }
+    }
+    private async Task<IEnumerable<string>> SearchInTitles(string value)
+    {
+        await ToggleDataMode(TrashMode);
+        if (string.IsNullOrEmpty(value))
+            return new string[0];
+        return PasswordsTitles.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+    private async Task LoadPasswords(string filter = null, int pagenumber = 1)
+    {
+        loading = true;
+        PasswordsResponse = await PasswordsService.GetListAsync(new GetListDto() { Filter = filter, PageSize = pageSize, PageNumber = pagenumber });
+        if (PasswordsResponse.Success && PasswordsResponse.Data != null && PasswordsResponse.Data.Count() >= 1)
+        {
+            PasswordsTitles = PasswordsResponse.Data.Select(p => p.Title).ToList();
+        }
+        loading = false;
+    }
+    private async Task SelectedPageChnaged(int page)
+    {
+        await LoadPasswords(pagenumber: page);
+    }
+    private async Task ToggleDataMode(bool mode)
+    {
+        TrashMode = mode;
+        switch (TrashMode)
+        {
+            case true:
+                await LoadDeletedPasswords(1);
+                break;
+            case false:
+                await LoadPasswords();
+                break;
+        }
+    }
+    private async Task OpenGeneratePasswordDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var results = DialogService.Show<GeneratePasswordDialog>("Generate Password", options);
+        var dialogres = await results.Result;
+    }
+    private async Task LoadDeletedPasswords(int page)
+    {
+        loading = true;
+        PasswordsResponse = await PasswordsService.GetTrashedListAsync(new GetListDto() { PageSize = pageSize, PageNumber = page });
+        if (PasswordsResponse.Success && PasswordsResponse.Data != null && PasswordsResponse.Data.Count() >= 1)
+        {
+            PasswordsTitles = PasswordsResponse.Data.Select(p => p.Title).ToList();
+        }
+        loading = false;
+    }
+}
